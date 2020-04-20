@@ -82,7 +82,7 @@ def filter_conf(min_conf, itemset, records, output):
         lhs_times = lhs_times + 1
         if is_subset(rhs, record):
           rhs_times = rhs_times + 1
-    logging.debug('lhs={}, lhs_times={}, rhs={}, rhs_times={}'.format(lhs, lhs_times, rhs, rhs_times))
+    # logging.debug('lhs={}, lhs_times={}, rhs={}, rhs_times={}'.format(lhs, lhs_times, rhs, rhs_times))
     if (rhs_times/lhs_times) >= min_conf:
       if output: 
         sup = get_frequence(itemset, records)
@@ -106,7 +106,7 @@ def apriori(min_sup, min_conf, items, records, output):
         new_freq_itemsets.append(itemset)
     res = res + new_freq_itemsets
     freq_itemsets = new_freq_itemsets.copy()
-  logging.debug('number of results: {}'.format(len(res)))
+  logging.info('number of results: {}'.format(len(res)))
   nr_res = 0
   for itemset in res:
     if filter_conf(min_conf, itemset, records, output):

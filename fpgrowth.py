@@ -1,4 +1,5 @@
 import logging
+#               
 
 class fpTreeNode:
   """
@@ -12,152 +13,126 @@ class fpTreeNode:
     self.name = name
     self.cnt = cnt
     self.parent = parent
+    self.nxt = None
     self.children = []
     # logging.debug('create node: %s' % name)
+  
   def __repr__(self):
     print('(%s: %d)' % (self.name, self.cnt))
 
-  def output(self, indent=1):
+  def display(self, indent=1):
     print(' '*indent, self.name, ' ', self.cnt)
     if self.children:
       for child in self.children:
-        child.output(indent+1)
+        child.display(indent+1)
   
-  def add_cnt(self):
-    self.cnt += 1
+  def add_cnt(self, cnt=1):
+    self.cnt += cnt
     # logging.debug('node: %s cnt+1=%d' % (self.name, self.cnt))
 
-# ---------------------------------------------------------
-def find_in_nodes_list(name, node_list):
-  """在一系列节点中查找名字为name的节点，返回第一个
-  """
-  for node in node_list:
-    if name == node.name:
-      return node
-  return None
-
+# ---------------------------------------------------------------
 class fpTree:
-  """
-  root_children: list of nodes, 直接与根节点相连的节点
-  """
-  def __init__(self, min_sup, min_conf, records, items):
+  def __init__(self, min_sup, data_set):
     self.min_sup = min_sup
-    self.min_conf = min_conf
-    self.records = records
-    self.items = items
-    self.root_children = []
-
-  def __repr__(self):
-    for child in self.root_children:
-      child.output()
-
-  def update_fptree(self, record):
-    """给定record，更新fp-tree
-    """
-    logging.debug('add record:{} to fp-tree'.format(record))
-    cur_node = None
-    for item in record:
-      if cur_node is None:
-        children = self.root_children
-      else:
-        children = cur_node.children
-      new_node = find_in_nodes_list(item, children)
-      if new_node is None:
-        # 在孩子里找不到这个item，新建一个节点，并加入header table和children中
-        new_node = fpTreeNode(name=item, cnt=1, parent=cur_node)
-        self.header_table[item].append(new_node)
-        children.append(new_node)
-      else:
-        # 在孩子里找到了这个item，计数+1
-        new_node.add_cnt()
-      cur_node = new_node
-
-  def construct(self):
-    # Scan DB, find frequent 1-itemset and their frequencies
-    self.freq_dict = {}
-    for item in self.items:
-      self.freq_dict[item] = 0
-    for record in self.records:
-      for item in record:
-        self.freq_dict[item] += 1
-    # create header table
+    self.data_set = data_set
     self.header_table = {}
-    for item in self.items:
+    self.root = fpTreeNode('root', 1, None)
+  
+  def display(self):
+    self.root.display()
+
+  def find_in_nodelist(self, name, node_list):
+    for node in node_list:
+      if node.name == name:
+        return node
+    return None
+
+  def update_fptree(self, trans, cnt):
+    # logging.debug('update tree with {}:{}'.format(trans, cnt))
+    cur_node = self.root
+    for item in trans:
+      child_node = self.find_in_nodelist(item, cur_node.children)
+      if child_node != None:
+        # 已经存在于子节点中，直接更新计数
+        child_node.add_cnt(cnt)
+      else:
+        # 否则新建节点，并加入子节点中
+        child_node = fpTreeNode(item, cnt, cur_node)
+        cur_node.children.append(child_node)
+        # 记入header_table的链表中
+        self.header_table[item].append(child_node)
+      cur_node = child_node
+
+  def create(self):
+    # 将在header table中记录每个item的出现次数
+    self.header_table = {}
+    self.freq_dict = {}
+    if self.data_set == None:
+      return None
+    # 第一遍扫描DB，计算每个item出现的次数
+    for trans in self.data_set:
+      for item in trans:
+        self.freq_dict[item] = self.freq_dict.get(item, 0) + self.data_set[trans]
+    # 只为所有频繁的item创建header table表项
+    for item in self.freq_dict:
       if self.freq_dict[item] >= self.min_sup:
         self.header_table[item] = []
-    # logging.debug(sorted(self.header_table.keys(), key=lambda x: self.freq_dict[x]), reverse=True)
-    # Scan DB 2nd time
-    for record in self.records:
-      # delete infrequent items 
-      new_record = []
-      for item in record:
+    # 无频繁项集就立刻返回None
+    if len(self.header_table.keys()) == 0:
+      return None
+    # 第二遍扫描DB，删除所有非频繁item，排序，建树
+    for trans in self.data_set:
+      filtered_trans = []
+      # 保留频繁的item
+      for item in trans:
         if self.freq_dict[item] >= self.min_sup:
-          new_record.append(item)
-      # sort frequent items
-      new_record = sorted(new_record, key=lambda x: (self.freq_dict[x], x),reverse=True)
-      # new_record.sort(key=self.freq_key, reverse=True)
-      # logging.debug('------------------------')
-      # for i in new_record:
-      #   logging.debug('%s: %d'% (i, self.freq_dict[i] ))
-      self.update_fptree(new_record)
-
-  def find_all_paths(self, item):
-    """在fp-tree中为某个倒序item找到所有路径，返回一个字典记录每个item出现的次数
+          filtered_trans.append(item)
+      ordered_trans = sorted(filtered_trans, key=lambda p: (self.freq_dict[p],p), reverse=True)
+      self.update_fptree(ordered_trans, self.data_set[trans])
+    return self.header_table
+  
+  def prefix_paths(self, item):
+    """找到某一个item开始的所有前缀路径
     """
-    paths = []
-    for bottom in self.header_table[item]:
-      node_list, freq = [], bottom.cnt
-      while bottom is not None:
-        node_list.insert(0, bottom.name)
-        bottom = bottom.parent
-      for i in range(0, freq):
-        paths.append(node_list)
-    return paths
+    ret_dict= {}
+    for head_node in self.header_table[item]:
+      node = head_node.parent
+      path_list, cnt = [], head_node.cnt
+      while node != self.root:
+        path_list.insert(0, node.name)
+        node = node.parent
+      ret_dict[frozenset(path_list)] = cnt
+    return ret_dict
 
-  def mine(self):
-    # 最开始的频繁项集是header table中的各元素
-    freq_1_itemsets = sorted(self.header_table.keys(), key=lambda x: self.freq_dict[x])
+
+  def mine(self, freq_set, freq_set_list):
+    freq_1_itemsets = sorted(v[0] for v in sorted(self.header_table.items(), key=lambda p : (self.freq_dict[p[0]], p[0])))
     for item in freq_1_itemsets:
-      new_records = []
-      for bottom in self.header_table[item]:
-        prefix_list, freq = [], bottom.cnt
-        while bottom is not None:
-          prefix_list.insert(0, bottom.name)
-          bottom = bottom.parent
-      for i in range(0, freq):
-        new_records.append(prefix_list)
-      new_tree = fpTree(self.min_sup, self.min_conf, new_records, set(freq_1_itemsets))
-      new_tree.construct()
-      if new_tree.header_table != None:
-        new_tree.mine()
-      else:
-        self.records = new_tree.records
+      new_freq_set = freq_set.copy()
+      new_freq_set.add(item)
+      freq_set_list.append(new_freq_set)
+      paths = self.prefix_paths(item)
+      new_fptree = fpTree(self.min_sup, paths)
+      new_header_table = new_fptree.create()
+      if new_header_table != None:
+        new_fptree.mine(new_freq_set, freq_set_list)
 
-  def mining(self, prefix, freq_itemsets):
-    freq_1_itemsets = sorted(self.header_table.keys(), key=lambda x: self.freq_dict[x])
-    for itemset in freq_1_itemsets:
-      new_freq_set = prefix.copy()
-      new_freq_set.add(itemset)
-      freq_itemsets.append(new_freq_set)
-      cond_pattern_bases = self.find_all_paths(itemset)
-      cond_tree = fpTree(self.min_sup, self.min_conf, cond_pattern_bases, freq_itemsets)
-      cond_tree.construct()
-      if cond_tree.header_table != None:
-        cond_tree.mining(new_freq_set,  freq_itemsets)
 
+# -----------------------------------------
+def do_fp_growth(min_sup, records):
+  data_set = {}
+  for record in records:
+    key = frozenset(record)
+    if key in record:
+      data_set[key] += 1
+    else:
+      data_set[key] = 1
+  fptree = fpTree(min_sup, data_set)
+  fptree.create()
+  # fptree.display()
+  freq_set_list = []
+  fptree.mine(set(), freq_set_list)
+  freq_set_list = sorted(freq_set_list, key=lambda p: len(p))
+  return freq_set_list
   
-  def output_result(self):
-    for record in self.records:
-      print(record)
 
-# ----------------------------------------------------------
-def do_fp_growth(min_sup, min_conf, items, records):
-  fptree = fpTree(min_sup, min_conf, records, items)
-  fptree.construct()
-  # logging.debug(fptree)
-  # fptree.mine()
-  res = []
-  fptree.mining(set(), res)
-  print(res)
-  # fptree.output_result()
-  
