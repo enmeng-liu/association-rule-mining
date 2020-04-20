@@ -17,12 +17,12 @@ def get_records_and_items():
       records.append(item_line)
     return records, items
 
-if __name__ == '__main__':
-  # t1 = time.time()
-  logging.basicConfig(level = logging.DEBUG)
-  records, items = get_records_and_items()
-  min_sup, min_conf = 100, 0.5
-  apriori.apriori(min_sup=100, min_conf=0.5, items=items, records=records, output=False)
+# if __name__ == '__main__':
+#   # t1 = time.time()
+#   logging.basicConfig(level = logging.DEBUG)
+#   records, items = get_records_and_items()
+#   min_sup, min_conf = 100, 0.5
+#   apriori.apriori(min_sup=100, min_conf=0.5, items=items, records=records, output=False)
   # freq_itemsets =  fpgrowth.do_fp_growth(min_sup, records)
   # print(len(freq_itemsets))
   # t2 = time.time()

@@ -64,10 +64,13 @@ def apriori_gen(k, min_sup, freq_itemsets):
   return new_freq_itemsets
 
 
-def filter_conf(min_conf, itemset, records, output):
+def filter_conf(min_conf, itemset, records):
   """计算A=>B的置信度
   """
+  ret_list = []
   size = len(itemset)
+  if size <= 1:
+    return []
   status = 1 << size
   for i in range(1, status-1):
     lhs, rhs = [], []
@@ -84,15 +87,15 @@ def filter_conf(min_conf, itemset, records, output):
           rhs_times = rhs_times + 1
     # logging.debug('lhs={}, lhs_times={}, rhs={}, rhs_times={}'.format(lhs, lhs_times, rhs, rhs_times))
     if (rhs_times/lhs_times) >= min_conf:
-      if output: 
-        sup = get_frequence(itemset, records)
-        print('{} => {}: [{}, {}]'.format(lhs, rhs, sup, rhs_times/lhs_times))
+      sup = get_frequence(itemset, records)
+      ret_list.append('{} => {}: [{}, {}]'.format(lhs, rhs, sup, rhs_times/lhs_times))
+  return ret_list
 
 
-def apriori(min_sup, min_conf, items, records, output):
+def apriori(min_sup, items, records):
   nr_items = len(items)
   freq_itemsets = find_freq_1_itemsets(min_sup, items, records)
-  logging.debug('freq 1-itemsets: {}'.format(len(freq_itemsets)))
+  # logging.debug('freq 1-itemsets: {}'.format(len(freq_itemsets)))
   # res = freq_itemsets
   res = []
   for k in range(1, nr_items + 1):
@@ -106,10 +109,11 @@ def apriori(min_sup, min_conf, items, records, output):
         new_freq_itemsets.append(itemset)
     res = res + new_freq_itemsets
     freq_itemsets = new_freq_itemsets.copy()
-  logging.info('number of results: {}'.format(len(res)))
-  nr_res = 0
-  for itemset in res:
-    if filter_conf(min_conf, itemset, records, output):
-      nr_res = nr_res + 1
+  return res
+  # logging.info('number of s: {}'.format(len(res)))
+  # nr_res = 0
+  # for itemset in res:
+  #   if filter_conf(min_conf, itemset, records, output):
+  #     nr_res = nr_res + 1
   # if output:
   #   print('Mining finished. Get %d rules in total' % nr_res)

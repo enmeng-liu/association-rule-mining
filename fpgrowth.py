@@ -1,5 +1,5 @@
 import logging
-#               
+# https://blog.csdn.net/songbinxu/article/details/80411388  
 
 class fpTreeNode:
   """
@@ -13,7 +13,6 @@ class fpTreeNode:
     self.name = name
     self.cnt = cnt
     self.parent = parent
-    self.nxt = None
     self.children = []
     # logging.debug('create node: %s' % name)
   
@@ -64,7 +63,6 @@ class fpTree:
       cur_node = child_node
 
   def create(self):
-    # 将在header table中记录每个item的出现次数
     self.header_table = {}
     self.freq_dict = {}
     if self.data_set == None:
@@ -101,7 +99,11 @@ class fpTree:
       while node != self.root:
         path_list.insert(0, node.name)
         node = node.parent
-      ret_dict[frozenset(path_list)] = cnt
+      key = frozenset(path_list)
+      if key in ret_dict:
+        ret_dict[key] += cnt
+      else:
+        ret_dict[key] = cnt
     return ret_dict
 
 
@@ -110,7 +112,8 @@ class fpTree:
     for item in freq_1_itemsets:
       new_freq_set = freq_set.copy()
       new_freq_set.add(item)
-      freq_set_list.append(new_freq_set)
+      if len(new_freq_set) > 1:
+        freq_set_list.append(new_freq_set)
       paths = self.prefix_paths(item)
       new_fptree = fpTree(self.min_sup, paths)
       new_header_table = new_fptree.create()
@@ -123,7 +126,7 @@ def do_fp_growth(min_sup, records):
   data_set = {}
   for record in records:
     key = frozenset(record)
-    if key in record:
+    if key in data_set:
       data_set[key] += 1
     else:
       data_set[key] = 1
