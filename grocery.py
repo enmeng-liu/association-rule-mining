@@ -5,7 +5,7 @@ import time
 def get_records_and_items():
   """读取csv，将购买记录整理为list of lists
   """
-  with open('Groceries.csv') as f:
+  with open('dataset/GroceryStore/Groceries.csv') as f:
     f_csv = csv.reader(f)
     _ = next(f_csv)
     records = []

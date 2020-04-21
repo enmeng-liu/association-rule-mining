@@ -16,11 +16,15 @@ def get_frequence(itemset, records):
       freq = freq + 1
   return freq
 
-def find_freq_1_itemsets(min_sup, items, records):
+def find_freq_1_itemsets(min_sup, records):
+  freq_dict = {}
+  for record in records:
+    for item in record:
+      freq_dict[item] = freq_dict.get(item, 0) + 1
   freq_itemsets = []
-  for item in items:
-    if get_frequence({item}, records) > min_sup:
-      freq_itemsets.append([item])
+  for item in freq_dict:
+    if freq_dict[item] >= min_sup:
+      freq_itemsets.append([item,])
   return freq_itemsets
 
 def list_match(l1, l2):
@@ -54,13 +58,12 @@ def apriori_gen(k, min_sup, freq_itemsets):
         # 因为是排好序的list，所以join操作其实就是加上最后一个元素
         c = itemset1.copy()
         c.append(itemset2[-1])
-        # print(itemset1)
         c.sort()
         # 当c所有k-subset都为频繁项集时加入结果中
         if not has_infreq_subset(c, freq_itemsets):
           new_freq_itemsets.append(c)
-  if new_freq_itemsets:
-    logging.info('k={}, freq[0]={}, times={}'.format(k, new_freq_itemsets[0], get_frequence(new_freq_itemsets[0], freq_itemsets)))
+  # if new_freq_itemsets:
+  #   logging.info('k={}, freq[0]={}, times={}'.format(k, new_freq_itemsets[0], get_frequence(new_freq_itemsets[0], freq_itemsets)))
   return new_freq_itemsets
 
 
@@ -92,13 +95,10 @@ def filter_conf(min_conf, itemset, records):
   return ret_list
 
 
-def apriori(min_sup, items, records):
-  nr_items = len(items)
-  freq_itemsets = find_freq_1_itemsets(min_sup, items, records)
-  # logging.debug('freq 1-itemsets: {}'.format(len(freq_itemsets)))
-  # res = freq_itemsets
-  res = []
-  for k in range(1, nr_items + 1):
+def apriori(min_sup, records):
+  freq_itemsets = find_freq_1_itemsets(min_sup, records)
+  res, k = [], 1
+  while True:
     freq_itemsets = apriori_gen(k, min_sup, freq_itemsets)
     if not freq_itemsets:
       break
@@ -107,8 +107,9 @@ def apriori(min_sup, items, records):
     for itemset in freq_itemsets:
       if get_frequence(itemset, records) >= min_sup:
         new_freq_itemsets.append(itemset)
-    res = res + new_freq_itemsets
-    freq_itemsets = new_freq_itemsets.copy()
+    res += new_freq_itemsets
+    freq_itemsets = new_freq_itemsets
+    k += 1
   return res
   # logging.info('number of s: {}'.format(len(res)))
   # nr_res = 0

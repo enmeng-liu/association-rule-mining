@@ -1,11 +1,17 @@
 import csv, logging, time, os, psutil
-import apriori
-import fpgrowth
-import grocery_store
+import apriori, fpgrowth, baseline
+import grocery_store, unix_usage
 
 time_and_mem = False
 # method = 'apriori'
 method = 'fpgrowth'
+# method = 'baseline'
+
+method_dict = {
+  'apriori': apriori.apriori,
+  'fpgrowth': fpgrowth.do_fp_growth,
+  'baseline': baseline.do_baseline
+}
 
 def check_sup(freq_itemsets, records, min_sup):
   for itemset in freq_itemsets:
@@ -18,13 +24,11 @@ def check_sup(freq_itemsets, records, min_sup):
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG)
-  records, items = grocery_store.get_records_and_items()
-  min_sup, min_conf = 100,0.5
+  # records = grocery_store.get_records()
+  records = unix_usage.get_records(1)
+  min_sup, min_conf = 200, 0.7
   t1 = time.time()
-  if method == 'apriori':
-    freq_itemsets = apriori.apriori(min_sup=min_sup, items=items, records=records)
-  else:
-    freq_itemsets = fpgrowth.do_fp_growth(min_sup=min_sup, records=records)
+  freq_itemsets = method_dict[method](min_sup, records)
   if time_and_mem:
     t2 = time.time()
     print('time consume: %f s' % (t2 - t1))
@@ -36,12 +40,11 @@ if __name__ == '__main__':
     #   print(list(itemset))
     # check_sup(freq_itemsets, records, min_sup)
   
-  # ass_rules = []
-  # for itemset in freq_itemsets:
-  #   ass_rules += apriori.filter_conf(min_conf, list(itemset), records)
-  
-  # print('%d rules in total:' % len(ass_rules))
-  # for rule in ass_rules:
-    # print(rule)
+  ass_rules = []
+  for itemset in freq_itemsets:
+    ass_rules += apriori.filter_conf(min_conf, list(itemset), records)
+  print('%d rules in total:' % len(ass_rules))
+  for rule in ass_rules:
+    print(rule)
 
 
